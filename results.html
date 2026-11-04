@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Card Game Results</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="results">
+  <div class="wrap">
+    <header class="bar">
+      <h1>Card Game – Results</h1>
+      <div class="counter" id="counter">– <span>registered</span> · – <span>finished</span></div>
+      <div class="toggles">
+        <label><input type="checkbox" id="exPilot" checked> Exclude pilot data</label>
+        <label><input type="checkbox" id="exKnew"> Exclude people who knew the problem</label>
+      </div>
+    </header>
+    <p class="status" id="status">Loading…</p>
+    <div id="msg"></div>
+
+    <button class="btn primary reveal" id="reveal">Reveal results</button>
+
+    <section id="charts" hidden>
+      <div class="grid">
+        <div class="panel">
+          <h2>Switch rate by round</h2>
+          <div class="chart-box"><canvas id="c1"></canvas></div>
+        </div>
+        <div class="panel">
+          <h2>Win rate: switching vs staying</h2>
+          <div class="chart-box"><canvas id="c2"></canvas></div>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:24px">
+        <h2>Switch rate by group</h2>
+        <table id="tbl"></table>
+        <p class="note">Switch rate = share of all decisions in that run where the player switched (pooled over rounds and players).
+          Track effect = change of Track minus change of Control, in percentage points.</p>
+      </div>
+    </section>
+
+    <div class="downloads">
+      <button class="btn" id="dlDecisions">Download decisions.csv</button>
+      <button class="btn" id="dlParticipants">Download participants.csv</button>
+    </div>
+    <p class="note">CSV downloads contain all rows (including pilot data, with the is_pilot column), regardless of the toggles.</p>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="config.js"></script>
+  <script src="results.js"></script>
+</body>
+</html>
