@@ -474,6 +474,13 @@ if (typeof document !== 'undefined') (function () {
     return wait(ms).then(function () { el.classList.remove('flipping'); el.classList.add('is-open'); });
   }
 
+  function trackTotals() {
+    return S.history.reduce(function (t, h) {
+      const v = MH.strategyPoints(h.prize_card, h.first_pick, CONFIG);
+      return { mine: t.mine + h.points, sw: t.sw + v.sw, st: t.st + v.st };
+    }, { mine: 0, sw: 0, st: 0 });
+  }
+
   function roundScreen() {
     const r = ensureRound();
     const head = '<div class="round-head"><span>Run ' + S.run + '</span><span>Round ' + S.period + ' of ' + rounds(S.run) + '</span></div>';
@@ -507,11 +514,12 @@ if (typeof document !== 'undefined') (function () {
       pendingText = outcome;
       let after = '';
       if (S.run === 2 && S.group === 'Track') {
-        const last = S.history[S.history.length - 1];
-        after += '<div class="track-box"><div><span>Your points so far</span><b>' + last.cum_points + '</b></div>' +
-          '<div><span>If you had always switched</span><b>' + last.always_switch_cum + '</b></div>' +
-          '<div><span>If you had always stayed</span><b>' + last.always_stay_cum + '</b></div>' +
-          '<p class="track-note">Totals for this run, on your own cards.</p></div>';
+        // Totals over the whole game so far (Run 1 round 1 up to this round), not only Run 2.
+        const t = trackTotals();
+        after += '<div class="track-box"><div><span>Your points so far</span><b>' + t.mine + '</b></div>' +
+          '<div><span>If you had always switched</span><b>' + t.sw + '</b></div>' +
+          '<div><span>If you had always stayed</span><b>' + t.st + '</b></div>' +
+          '<p class="track-note">Totals since Round 1 of Run 1, on your own cards.</p></div>';
       }
       after += '<button class="btn primary" id="next">Next round</button>';
       controls = '<div id="after"' + (animating ? ' hidden' : '') + '>' + after + '</div>';
