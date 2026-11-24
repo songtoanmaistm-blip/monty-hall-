@@ -3,7 +3,6 @@
  * Replication of Friedman (1998), AER 88(4).
  *
  * Deploy:  Deploy → New deployment → Web app → Execute as: Me, Who has access: Anyone.
- * Admin:   Project Settings → Script Properties → ADMIN_KEY = <a long secret word>.
  *
  * IMPORTANT: SETTINGS below must match config.js on the website.
  * The game checks this at registration and refuses to start if they differ.
@@ -38,7 +37,7 @@ var BUTTON_ORDERS = ['switch-left', 'stay-left'];
 function doGet(e) {
   var p = (e && e.parameter) || {};
   try {
-    if (p.action === 'results') return json_(getResults_(p.key));
+    if (p.action === 'results') return json_(getResults_());
     return json_({ ok: true, service: 'monty-hall', settings: SETTINGS });
   } catch (err) {
     return errorResponse_(err);
@@ -347,18 +346,18 @@ function finish_(b) {
   return { ok: true, total_points: total };
 }
 
-function getResults_(key) {
-  var adminKey = PropertiesService.getScriptProperties().getProperty('ADMIN_KEY');
-  if (!adminKey) return { ok: false, code: 'not_configured', error: 'ADMIN_KEY is not set in Script Properties.' };
-  if (!key || String(key) !== adminKey) return { ok: false, code: 'unauthorized', error: 'Wrong or missing key.' };
+/** Results are open to anyone with the link (no admin key). device_token is left out:
+ *  it is what lets a phone write rows for its player, so it must not be published. */
+function getResults_() {
+  function hideToken(o) { delete o.device_token; return o; }
   var psh = sheet_('participants', PARTICIPANT_COLS);
   var dsh = sheet_('decisions', DECISION_COLS);
   return {
     ok: true,
     settings: SETTINGS,
     server_time: new Date().toISOString(),
-    participants: rows_(psh, PARTICIPANT_COLS.length).map(function (r) { return toObj_(PARTICIPANT_COLS, r); }),
-    decisions: rows_(dsh, DECISION_COLS.length).map(function (r) { return toObj_(DECISION_COLS, r); }),
+    participants: rows_(psh, PARTICIPANT_COLS.length).map(function (r) { return hideToken(toObj_(PARTICIPANT_COLS, r)); }),
+    decisions: rows_(dsh, DECISION_COLS.length).map(function (r) { return hideToken(toObj_(DECISION_COLS, r)); }),
   };
 }
 

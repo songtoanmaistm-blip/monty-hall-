@@ -178,9 +178,9 @@ console.log('4. Brute-force recomputation of derived columns from the Sheet');
 /* ------------------------------------------------ 5. results API, pilot clear */
 console.log('5. Results API and pilot clean-up');
 {
-  ok(gas.get({ action: 'results', key: 'wrong' }).code === 'unauthorized', 'wrong admin key returns no data');
-  ok(gas.get({ action: 'results' }).code === 'unauthorized', 'missing admin key returns no data');
-  const res = gas.get({ action: 'results', key: 'secret-key' });
+  const res = gas.get({ action: 'results' });
+  ok(res.ok, 'results load without an admin key');
+  ok(res.participants.concat(res.decisions).every(r => !('device_token' in r)), 'results never publish device tokens');
   ok(res.ok && res.participants.length === 24 && res.decisions.length === 232, 'results: 24 participants, 232 decisions (got ' + res.participants.length + ', ' + res.decisions.length + ')');
   ok(res.participants.filter(p => p.is_pilot === 1).length === 3, '3 pilot participants flagged');
   ok(res.decisions.filter(d => d.is_pilot === 1).length === 30, '30 pilot decisions flagged');
