@@ -90,6 +90,7 @@ for (let i = 1; i <= 20; i++) real.push(playPlayer('ST' + String(i).padStart(2, 
 const nTrack = real.filter(p => p.group === 'Track').length;
 console.log('   real groups: Track ' + nTrack + ', Control ' + (20 - nTrack));
 ok(nTrack === 10, 'groups are balanced 10/10 among 20 real players');
+ok(real.every((p, i) => p.group === (i % 2 === 0 ? 'Control' : 'Track')), 'groups alternate Control, Track, Control, … in order of registration');
 
 /* ---------------------------------------------- invalid inputs / edge cases */
 console.log('3. Invalid inputs and edge cases');
@@ -189,7 +190,7 @@ console.log('5. Results API and pilot clean-up');
   const after = gas.get({ action: 'results', key: 'secret-key' });
   ok(after.participants.length === 21 && after.decisions.length === 202, 'after "Delete pilot rows": 21 participants, 202 decisions');
   ok(after.participants.every(p => p.is_pilot === 0), 'no pilot rows remain');
-  ok(!gas.props.has('GROUP_BLOCK_PILOT'), 'pilot group sequence reset');
+  ok(!gas.props.has('GROUP_COUNT_PILOT'), 'pilot group sequence reset');
 }
 
 console.log('\n' + (failures ? failures + ' of ' + checks + ' checks FAILED' : 'All ' + checks + ' checks passed.'));

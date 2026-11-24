@@ -100,7 +100,7 @@ Do this a few days before class, with the `?pilot=1` link.
 - [ ] **Duplicate code name:** on phone 2, use the same code name as phone 1. You must see "This code name is taken, please choose another".
 - [ ] **Reload mid-game:** in the middle of a round (after picking a card), reload the page or close and reopen the tab. It must come back to the same round with the same cards.
 - [ ] **Airplane mode:** turn on airplane mode, play 1–2 rounds (the top corner shows "offline – will retry"), then turn it off. Within a few seconds it must show "saved ✓", and the rows must appear in the Sheet with no gaps or duplicates.
-- [ ] **Sheet check:** each phone has exactly 10 rows in `decisions` (5 + 5). `group` is `Baseline` in Run 1 and `Track` or `Control` in Run 2. `participants` shows `finished = 1` and the right `total_points`. With 4 pilot phones, the split should be 2 Track / 2 Control.
+- [ ] **Sheet check:** each phone has exactly 10 rows in `decisions` (5 + 5). `group` is `Baseline` in Run 1 and `Track` or `Control` in Run 2. `participants` shows `finished = 1` and the right `total_points`. Pilot players alternate Control, Track, Control, Track in the order they register.
 - [ ] **Track box:** a Track phone shows the "If you had always switched / stayed" box after each Run 2 round. A Control phone never shows it.
 - [ ] **Results page by hand:** untick "Exclude pilot data". For one round, count the switches in the Sheet yourself (or use a filter) and compare with Chart 1. Do the same for one cell of the table.
 - [ ] **Time the session** from scanning the QR code to the thank-you screen.
@@ -127,7 +127,7 @@ Do this a few days before class, with the `?pilot=1` link.
 
 **`participants`** has one row per person. `comprehension_errors` is the total number of wrong answers in the quick check, counting each wrong question on each attempt. `manip_direct` is blank for Control. `total_points` is computed by the server from the `decisions` rows.
 
-Group assignment uses permuted blocks of 4 (2 Track + 2 Control in random order), run under a lock on the server. At any moment the two groups differ by at most 2 people.
+Group assignment alternates in order of registration (when the player presses Continue on the code-name page): 1st Control, 2nd Track, 3rd Control, 4th Track, and so on. It runs under a lock on the server, so two players registering at the same moment still get different slots. Pilot players have their own sequence, and **Delete pilot rows** restarts it. At any moment the two groups differ by at most 1 person.
 
 ## Local testing (optional, for whoever maintains the code)
 

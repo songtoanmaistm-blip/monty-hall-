@@ -217,23 +217,16 @@ function register_(b) {
   return { ok: true, participant_id: name, group: group, settings: SETTINGS };
 }
 
-/** Permuted-block randomisation: blocks of 4 (2 Track + 2 Control), separate sequences for pilot and real. */
+/**
+ * Alternating assignment in order of registration: 1st Control, 2nd Track, 3rd Control, 4th Track, …
+ * Pilot and real players have separate counters, so pilot testing cannot shift the real sequence.
+ */
 function nextGroup_(pilot) {
   var props = PropertiesService.getScriptProperties();
-  var key = pilot ? 'GROUP_BLOCK_PILOT' : 'GROUP_BLOCK_REAL';
-  var queue = JSON.parse(props.getProperty(key) || '[]');
-  if (!queue.length) queue = shuffle_(['Track', 'Track', 'Control', 'Control']);
-  var g = queue.shift();
-  props.setProperty(key, JSON.stringify(queue));
-  return g;
-}
-
-function shuffle_(a) {
-  for (var i = a.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var t = a[i]; a[i] = a[j]; a[j] = t;
-  }
-  return a;
+  var key = pilot ? 'GROUP_COUNT_PILOT' : 'GROUP_COUNT_REAL';
+  var n = Number(props.getProperty(key) || 0);
+  props.setProperty(key, String(n + 1));
+  return n % 2 === 0 ? 'Control' : 'Track';
 }
 
 function update_(b) {
@@ -410,7 +403,7 @@ function deletePilotRows() {
     var pi = PARTICIPANT_COLS.indexOf('is_pilot'), di = DECISION_COLS.indexOf('is_pilot');
     var np = filterSheet_('participants', PARTICIPANT_COLS, function (r) { return Number(r[pi]) !== 1; });
     var nd = filterSheet_('decisions', DECISION_COLS, function (r) { return Number(r[di]) !== 1; });
-    PropertiesService.getScriptProperties().deleteProperty('GROUP_BLOCK_PILOT');
+    PropertiesService.getScriptProperties().deleteProperty('GROUP_COUNT_PILOT');
     SpreadsheetApp.getUi().alert('Deleted ' + np + ' pilot participants and ' + nd + ' pilot decisions.');
   } finally {
     lock.releaseLock();
@@ -425,8 +418,8 @@ function deleteAllData() {
     filterSheet_('participants', PARTICIPANT_COLS, function () { return false; });
     filterSheet_('decisions', DECISION_COLS, function () { return false; });
     var props = PropertiesService.getScriptProperties();
-    props.deleteProperty('GROUP_BLOCK_PILOT');
-    props.deleteProperty('GROUP_BLOCK_REAL');
+    props.deleteProperty('GROUP_COUNT_PILOT');
+    props.deleteProperty('GROUP_COUNT_REAL');
     SpreadsheetApp.getUi().alert('All data deleted.');
   } finally {
     lock.releaseLock();
