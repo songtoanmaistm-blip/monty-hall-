@@ -96,7 +96,7 @@ Do this a few days before class, with the `?pilot=1` link.
 - [ ] **Reload mid-game:** in the middle of a round (after picking a card), reload the page or close and reopen the tab. It must come back to the same round with the same cards.
 - [ ] **Airplane mode:** turn on airplane mode, play 1–2 rounds (the top corner shows "offline – will retry"), then turn it off. Within a few seconds it must show "saved ✓", and the rows must appear in the Sheet with no gaps or duplicates.
 - [ ] **Sheet check:** each phone has exactly 10 rows in `decisions` (5 + 5). `group` is `Baseline` in Run 1 and `Track` or `Control` in Run 2. `participants` shows `finished = 1` and the right `total_points`. Pilot players alternate Control, Track, Control, Track in the order they register.
-- [ ] **Track box:** a Track phone shows the "If you had always switched / stayed" box after each Run 2 round. A Control phone never shows it.
+- [ ] **Track box:** a Track phone shows the "If you had always switched / stayed" box after each Run 2 round, with totals counted from Round 1 of Run 1. A Control phone never shows it.
 - [ ] **Results page by hand:** untick "Exclude pilot data". For one round, count the switches in the Sheet yourself (or use a filter) and compare with Chart 1. Do the same for one cell of the table.
 - [ ] **Time the session** from scanning the QR code to the thank-you screen.
 - [ ] Afterwards, click **Monty Hall → Delete pilot rows**.
@@ -114,7 +114,7 @@ Do this a few days before class, with the `?pilot=1` link.
 | `switch`, `won` | 1 or 0 |
 | `points` | 40 or 10 |
 | `cum_points` | the player's points so far **within this run**, including this round |
-| `always_switch_cum`, `always_stay_cum` | points the pure strategies would have earned on the player's own cards, **within this run**, including this round. In Run 2 these are the numbers shown in the Track box |
+| `always_switch_cum`, `always_stay_cum` | points the pure strategies would have earned on the player's own cards, **within this run**, including this round. The Track box shows totals over **both runs** instead (Run 1 round 1 up to the current round): the sum of `points`, and of what always-switch and always-stay would have earned |
 | `switchbonus` | Σ (always-switch − always-stay points) over **all earlier rounds** (Run 1 period 1 up to the previous round, across both runs). It is 0 in the first round |
 | `switchwon_prev` | 1 if switching would have won in the previous round (Run 2 period 1 uses Run 1 period 5); blank in the very first round |
 | `decision_time_ms` | time from the reveal appearing to the Switch/Stay tap. If the page was reloaded during the decision, it's counted from the reload |
