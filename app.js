@@ -82,8 +82,9 @@ if (typeof document !== 'undefined') (function () {
 
   const STATE_KEY = 'mh_state_v1';
   const PERMANENT = ['invalid', 'unknown_participant', 'name_taken', 'not_configured'];
-  const MAJORS = ['Economics/Business', 'Natural sciences', 'Social sciences', 'Humanities/Arts', 'Other'];
-  const SEXES = ['Female', 'Male', 'Prefer not to say'];
+  const COURSE = 'Experimental Economics';
+  const TEACHER = 'Mgr. Yuliya Petrenko, CSc., PhD';
+  const AUTHORS = ['Favio Daniel Cortez Salcedo', 'Mykhailo Shtokalo', 'Song Toan Mai', 'Vadym Oleshko'];
   const MANIP = ['Always switch', 'Always stay', 'Same', "I don't know"];
   const app = document.getElementById('app');
   const params = new URLSearchParams(location.search);
@@ -228,6 +229,9 @@ if (typeof document !== 'undefined') (function () {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+  function pts(n) { return n + (n === 1 ? ' point' : ' points'); }
+  function wait(ms) { return new Promise(function (res) { setTimeout(res, REDUCED ? Math.min(ms, 150) : ms); }); }
+  const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   function rounds(run) { return run === 1 ? CONFIG.ROUNDS_RUN1 : CONFIG.ROUNDS_RUN2; }
   function totalPoints() { return S.history.reduce(function (a, h) { return a + h.points; }, 0); }
   function go(step) { S.step = step; save(); render(); window.scrollTo(0, 0); }
@@ -252,7 +256,8 @@ if (typeof document !== 'undefined') (function () {
         'Please tell the presenter.</p></section>';
       return;
     }
-    const screens = { welcome, background, instructions, check, round: roundScreen, between, exit: exitScreen, done };
+    // 'background' is the old name of the code-name step (kept so saved progress still works).
+    const screens = { welcome, background: codeName, codename: codeName, instructions, check, round: roundScreen, between, exit: exitScreen, done };
     (screens[S.step] || welcome)();
     if (!storageOk) {
       app.insertAdjacentHTML('afterbegin', '<p class="feedback">This browser is not saving progress. ' +
@@ -260,17 +265,29 @@ if (typeof document !== 'undefined') (function () {
     }
   }
 
-  function welcome(errorMsg) {
+  function welcome() {
     app.innerHTML =
-      '<section class="card-panel">' +
-      '<h1>Welcome</h1>' +
-      '<p>Thank you for taking part. This is a short game with cards. It takes about 10 minutes.</p>' +
+      '<section class="card-panel center intro">' +
+      '<p class="eyebrow">' + esc(COURSE) + '</p>' +
+      '<h1>Welcome to our experiment</h1>' +
+      '<p>Welcome to the experiment of the course <b>' + esc(COURSE) + '</b>, taught by <b>' + esc(TEACHER) + '</b>.</p>' +
+      '<div class="authors"><p class="authors-title">Created by</p><ul>' +
+      AUTHORS.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul></div>' +
+      '<button class="btn primary" id="start">Start</button></section>';
+    document.getElementById('start').onclick = function () { go('codename'); };
+  }
+
+  function codeName() {
+    app.innerHTML =
+      '<section class="card-panel"><h1>Before we begin</h1>' +
       '<form id="f" novalidate autocomplete="off">' +
       '<label class="field-label" for="code">Choose a code name</label>' +
       '<p class="hint">For example your initials and two digits, like <b>JS27</b>. Do not use your real name.</p>' +
       '<input id="code" name="code" class="text-input" maxlength="20" autocapitalize="characters" spellcheck="false" ' +
-      'inputmode="text" placeholder="e.g. JS27">' +
-      '<p class="error" id="err" role="alert">' + (errorMsg ? esc(errorMsg) : '') + '</p>' +
+      'inputmode="text" placeholder="e.g. JS27" value="' + esc(S.participant_id || '') + '">' +
+      '<fieldset><legend class="field-label">Have you heard of the Monty Hall problem before?</legend>' +
+      '<div class="row2">' + radios('knew', ['Yes', 'No']) + '</div></fieldset>' +
+      '<p class="error" id="err" role="alert"></p>' +
       '<button class="btn primary" type="submit" id="go">Continue</button>' +
       '</form></section>';
     const form = document.getElementById('f');
@@ -279,8 +296,13 @@ if (typeof document !== 'undefined') (function () {
       const err = document.getElementById('err');
       const btn = document.getElementById('go');
       const code = form.code.value.trim().toUpperCase().replace(/\s+/g, '');
+      const knew = val(form, 'knew');
       if (!/^[A-Z0-9][A-Z0-9_-]{1,19}$/.test(code) || !/[A-Z]/.test(code)) {
         err.textContent = 'Please use 2–20 letters or digits (at least one letter), no spaces.';
+        return;
+      }
+      if (!knew) {
+        err.textContent = 'Please answer the question about the Monty Hall problem.';
         return;
       }
       btn.disabled = true;
@@ -309,34 +331,7 @@ if (typeof document !== 'undefined') (function () {
       }
       S.participant_id = res.participant_id;
       S.group = res.group;
-      go('background');
-    });
-  }
-
-  function background() {
-    app.innerHTML =
-      '<section class="card-panel"><h1>About you</h1>' +
-      '<form id="f" novalidate>' +
-      '<label class="field-label" for="major">Field of study</label>' +
-      '<select id="major" name="major" class="select"><option value="">Please choose…</option>' +
-      MAJORS.map(function (m) { return '<option>' + esc(m) + '</option>'; }).join('') + '</select>' +
-      '<fieldset><legend class="field-label">Sex</legend>' + radios('sex', SEXES) + '</fieldset>' +
-      '<fieldset><legend class="field-label">Have you taken a statistics course at university?</legend>' +
-      '<div class="row2">' + radios('stats', ['Yes', 'No']) + '</div></fieldset>' +
-      '<fieldset><legend class="field-label">Have you heard of the Monty Hall problem before?</legend>' +
-      '<div class="row2">' + radios('knew', ['Yes', 'No']) + '</div></fieldset>' +
-      '<p class="error" id="err" role="alert"></p>' +
-      '<button class="btn primary" type="submit">Continue</button>' +
-      '</form></section>';
-    const form = document.getElementById('f');
-    form.addEventListener('submit', function (ev) {
-      ev.preventDefault();
-      const data = { major: val(form, 'major'), sex: val(form, 'sex'), stats_course: val(form, 'stats'), knew_problem: val(form, 'knew') };
-      if (!data.major || !data.sex || !data.stats_course || !data.knew_problem) {
-        document.getElementById('err').textContent = 'Please answer all questions.';
-        return;
-      }
-      enqueue(Object.assign({ action: 'update', section: 'background' }, data));
+      enqueue({ action: 'update', section: 'background', knew_problem: knew });
       go('instructions');
       flush();
     });
@@ -348,17 +343,19 @@ if (typeof document !== 'undefined') (function () {
       '<li>You <b>pick one card</b>.</li>' +
       '<li>The computer then <b>turns over one of the other cards that has no prize</b>.</li>' +
       '<li>You then decide: <b>switch</b> to the other face-down card, or <b>stay</b> with your card.</li>' +
-      '<li>If your final card has the prize, you get <b>' + CONFIG.POINTS_WIN + ' points</b>. ' +
-      'If not, you get <b>' + CONFIG.POINTS_LOSE + ' points</b>.</li>' +
-      '<li>Try to earn <b>as many points as you can</b>.</li>' +
+      '<li>If your final card has the prize, you get <b>' + pts(CONFIG.POINTS_WIN) + '</b>. ' +
+      'If not, you get <b>' + pts(CONFIG.POINTS_LOSE) + '</b>.</li>' +
+      '<li>Try to earn <b>as many points as you can</b>. The maximum is <b>' +
+      pts(CONFIG.POINTS_WIN * (CONFIG.ROUNDS_RUN1 + CONFIG.ROUNDS_RUN2)) + '</b>.</li>' +
       '</ul>';
   }
 
   function instructions() {
     app.innerHTML =
       '<section class="card-panel"><h1>How the game works</h1>' + instructionList() +
-      '<p>The game has two runs of ' + CONFIG.ROUNDS_RUN1 + ' and ' + CONFIG.ROUNDS_RUN2 +
-      ' rounds. Each round is a new game with new cards.</p>' +
+      '<p>The game has two runs of ' + CONFIG.ROUNDS_RUN1 + ' rounds each' +
+      (CONFIG.ROUNDS_RUN1 === CONFIG.ROUNDS_RUN2 ? '' : ' (' + CONFIG.ROUNDS_RUN1 + ' and ' + CONFIG.ROUNDS_RUN2 + ')') +
+      ', ' + (CONFIG.ROUNDS_RUN1 + CONFIG.ROUNDS_RUN2) + ' rounds in total. Each round is a new game with new cards.</p>' +
       '<button class="btn primary" id="next">Continue</button></section>';
     document.getElementById('next').onclick = function () { go('check'); };
   }
@@ -381,7 +378,7 @@ if (typeof document !== 'undefined') (function () {
       text: 'How many points do you get if your final card has the prize?',
       options: opts,
       correct: String(CONFIG.POINTS_WIN),
-      hint: 'If your final card has the prize, you get ' + CONFIG.POINTS_WIN + ' points. If not, you get ' + CONFIG.POINTS_LOSE + ' points.',
+      hint: 'If your final card has the prize, you get ' + pts(CONFIG.POINTS_WIN) + '. If not, you get ' + pts(CONFIG.POINTS_LOSE) + '.',
     };
   }
 
@@ -435,72 +432,137 @@ if (typeof document !== 'undefined') (function () {
     return S.round;
   }
 
+  /* Card flips are animated only right after a tap (anim is set by pick/decide).
+   * After a reload the round is drawn in its final state, without animation. */
+  let pendingText = ''; // prompt shown once the flip has finished
+  let anim = null; // null | 'reveal' | 'result'
+
   function cardHTML(n, r) {
     const isFirst = r.first_pick === n;
     const isRevealed = r.revealed_card === n;
     const showAll = r.phase === 'result';
     const isFinal = showAll && r.final_card === n;
-    let face = 'down', label = '?';
-    if (isRevealed || showAll) {
-      face = n === r.prize_card ? 'prize' : 'empty';
-      label = n === r.prize_card ? '★<small>Prize</small>' : '<small>No prize</small>';
-    }
-    const clickable = r.phase === 'pick';
+    const open = isRevealed || showAll;
+    // A card that is about to be flipped is drawn face down; the animation turns it over.
+    const flipsNow = (anim === 'reveal' && isRevealed) || (anim === 'result' && !isRevealed);
+    const face = n === r.prize_card ? 'prize' : 'empty';
+    const label = n === r.prize_card ? '<span class="star">★</span><small>Prize</small>' : '<small>No prize</small>';
     const tags = [];
     if (r.phase === 'decide' && isFirst) tags.push('Your card');
     if (isFinal) tags.push('Your final card');
-    return '<button class="playing-card ' + face + (isFirst && r.phase !== 'result' ? ' picked' : '') +
-      (isFinal ? ' final' : '') + '" data-card="' + n + '"' + (clickable ? '' : ' disabled') +
-      ' aria-label="Card ' + n + '">' +
-      '<span class="face">' + label + '</span>' +
+    return '<button class="playing-card' + (isFirst && r.phase !== 'result' ? ' picked' : '') +
+      (isFinal ? ' final' : '') + (open && !flipsNow ? ' is-open' : '') + (flipsNow ? ' will-flip' : '') +
+      '" data-card="' + n + '"' + (r.phase === 'pick' ? '' : ' disabled') + ' aria-label="Card ' + n + '">' +
+      '<span class="card3d"><span class="flipper">' +
+      '<span class="side back"><span class="back-mark">?</span></span>' +
+      '<span class="side front ' + face + '">' + (open ? label : '') + '</span>' +
+      '</span></span>' +
       '<span class="card-name">Card ' + n + '</span>' +
       '<span class="card-tag">' + (tags[0] || '&nbsp;') + '</span></button>';
+  }
+
+  function flipCard(n, ms) {
+    const el = app.querySelector('[data-card="' + n + '"]');
+    if (!el) return Promise.resolve();
+    el.style.setProperty('--flip-ms', (REDUCED ? 150 : ms) + 'ms');
+    el.classList.remove('will-flip');
+    el.classList.add('flipping');
+    return wait(ms).then(function () { el.classList.remove('flipping'); el.classList.add('is-open'); });
   }
 
   function roundScreen() {
     const r = ensureRound();
     const head = '<div class="round-head"><span>Run ' + S.run + '</span><span>Round ' + S.period + ' of ' + rounds(S.run) + '</span></div>';
     let prompt = '', controls = '';
+    const animating = anim;
 
     if (r.phase === 'pick') {
       prompt = '<p class="prompt">Tap a card to pick it.</p>';
     } else if (r.phase === 'decide') {
       const other = MH.otherCard(r.first_pick, r.revealed_card);
-      prompt = '<p class="prompt">You picked <b>Card ' + r.first_pick + '</b>. The computer turned over <b>Card ' +
+      const question = '<p class="prompt" id="prompt">You picked <b>Card ' + r.first_pick + '</b>. The computer turned over <b>Card ' +
         r.revealed_card + '</b>: it has no prize.<br>Do you want to switch to Card ' + other + ' or stay with Card ' + r.first_pick + '?</p>';
+      prompt = animating
+        ? '<p class="prompt suspense" id="prompt">You picked <b>Card ' + r.first_pick + '</b>. The computer is turning over one of the other cards…</p>'
+        : question;
       const sw = '<button class="btn choice-btn" data-decide="1">Switch to Card ' + other + '</button>';
       const st = '<button class="btn choice-btn" data-decide="0">Stay with Card ' + r.first_pick + '</button>';
-      controls = '<div class="decide-row">' + (S.button_order === 'switch-left' ? sw + st : st + sw) + '</div>';
-      if (revealShownAt === null) revealShownAt = Date.now();
+      controls = '<div class="decide-row"' + (animating ? ' hidden' : '') + '>' + (S.button_order === 'switch-left' ? sw + st : st + sw) + '</div>';
+      if (animating) {
+        pendingText = question;
+      } else if (revealShownAt === null) {
+        revealShownAt = Date.now();
+      }
     } else {
-      prompt = r.won
-        ? '<p class="outcome win">Your final card has the prize. You earn <b>' + r.points + ' points</b>.</p>'
-        : '<p class="outcome lose">Your final card has no prize. You earn <b>' + r.points + ' points</b>.</p>';
+      const outcome = r.won
+        ? '<p class="outcome win">Your final card has the prize. You earn <b>' + pts(r.points) + '</b>.</p>'
+        : '<p class="outcome lose">Your final card has no prize. You earn <b>' + pts(r.points) + '</b>.</p>';
+      prompt = animating
+        ? '<p class="prompt suspense" id="prompt">Your final card is <b>Card ' + r.final_card + '</b>. Let’s see…</p>'
+        : outcome;
+      pendingText = outcome;
+      let after = '';
       if (S.run === 2 && S.group === 'Track') {
         const last = S.history[S.history.length - 1];
-        controls += '<div class="track-box"><div><span>Your points so far</span><b>' + last.cum_points + '</b></div>' +
+        after += '<div class="track-box"><div><span>Your points so far</span><b>' + last.cum_points + '</b></div>' +
           '<div><span>If you had always switched</span><b>' + last.always_switch_cum + '</b></div>' +
           '<div><span>If you had always stayed</span><b>' + last.always_stay_cum + '</b></div>' +
           '<p class="track-note">Totals for this run, on your own cards.</p></div>';
       }
-      controls += '<button class="btn primary" id="next">Next round</button>';
+      after += '<button class="btn primary" id="next">Next round</button>';
+      controls = '<div id="after"' + (animating ? ' hidden' : '') + '>' + after + '</div>';
     }
 
     app.innerHTML = '<section class="card-panel play">' + head + prompt +
       '<div class="cards">' + [1, 2, 3].map(function (n) { return cardHTML(n, r); }).join('') + '</div>' +
       controls + '</section>';
+    anim = null;
 
     if (r.phase === 'pick') {
       app.querySelectorAll('[data-card]').forEach(function (b) {
         b.onclick = function () { pick(Number(b.dataset.card)); };
       });
-    } else if (r.phase === 'decide') {
+      return;
+    }
+    if (r.phase === 'decide') {
       app.querySelectorAll('[data-decide]').forEach(function (b) {
         b.onclick = function () { decide(b.dataset.decide === '1'); };
       });
-    } else {
-      document.getElementById('next').onclick = nextRound;
+      if (animating) playReveal(r);
+      return;
     }
+    document.getElementById('next').onclick = nextRound;
+    if (animating) playResult(r);
+  }
+
+  /* Reveal: a short pause, then the computer slowly turns over an empty card. */
+  async function playReveal(r) {
+    const round = S.round;
+    await wait(900);
+    await flipCard(r.revealed_card, 2400);
+    await wait(500);
+    if (S.round !== round || S.step !== 'round') return;
+    const p = document.getElementById('prompt');
+    if (p) p.outerHTML = pendingText;
+    const row = app.querySelector('.decide-row');
+    if (row) row.hidden = false;
+    revealShownAt = Date.now();
+  }
+
+  /* Result: the other card turns first, then – after a pause – your final card, more slowly. */
+  async function playResult(r) {
+    const round = S.round;
+    const rest = [1, 2, 3].filter(function (n) { return n !== r.revealed_card && n !== r.final_card; });
+    await wait(700);
+    for (const n of rest) await flipCard(n, 1600);
+    await wait(900);
+    await flipCard(r.final_card, 2600);
+    await wait(300);
+    if (S.round !== round || S.step !== 'round') return;
+    const p = document.getElementById('prompt');
+    if (p) p.outerHTML = pendingText;
+    const after = document.getElementById('after');
+    if (after) after.hidden = false;
   }
 
   function pick(n) {
@@ -511,6 +573,7 @@ if (typeof document !== 'undefined') (function () {
     r.phase = 'decide';
     revealShownAt = null;
     save();
+    anim = 'reveal';
     render();
   }
 
@@ -534,6 +597,7 @@ if (typeof document !== 'undefined') (function () {
     S.history.push(row);
     enqueue(Object.assign({ action: 'decision' }, row));
     save(); // state + outbox saved together in one write
+    anim = 'result';
     render();
     flush();
   }
@@ -598,7 +662,8 @@ if (typeof document !== 'undefined') (function () {
 
   function done() {
     app.innerHTML = '<section class="card-panel center"><h1>Thank you!</h1>' +
-      '<p>Your total points:</p><p class="total">' + totalPoints() + '</p>' +
+      '<p>Your total points:</p><p class="total">' + totalPoints() + '<span class="total-max"> / ' +
+      CONFIG.POINTS_WIN * (CONFIG.ROUNDS_RUN1 + CONFIG.ROUNDS_RUN2) + '</span></p>' +
       '<p class="big">Please wait quietly until everyone has finished.</p>' +
       '<p id="wait-note" class="wait-note"' + (S.outbox.length ? '' : ' hidden') +
       '>Saving your answers… please keep this page open until the top corner says “saved ✓”.</p></section>';

@@ -6,7 +6,7 @@
 const MH = require('../app.js');
 const { loadCodeGs } = require('./gas-mock.js');
 
-const CFG = { ROUNDS_RUN1: 5, ROUNDS_RUN2: 5, POINTS_WIN: 40, POINTS_LOSE: 10 };
+const CFG = { ROUNDS_RUN1: 5, ROUNDS_RUN2: 5, POINTS_WIN: 1, POINTS_LOSE: 0 };
 let failures = 0, checks = 0;
 function ok(cond, msg) { checks++; if (!cond) { failures++; console.log('  FAIL: ' + msg); } }
 function near(x, target, tol, msg) { ok(Math.abs(x - target) <= tol, msg + ' (got ' + x.toFixed(4) + ', expected ' + target.toFixed(4) + ' ± ' + tol + ')'); }
@@ -51,7 +51,7 @@ function playPlayer(code, isPilot, opts) {
   ok(reg.ok, 'register ' + code + ': ' + JSON.stringify(reg));
   const id = reg.participant_id, group = reg.group;
   const base = { participant_id: id, device_token: tok };
-  ok(gas.post(Object.assign({ action: 'update', section: 'background', major: 'Other', sex: 'Female', stats_course: 'Yes', knew_problem: opts.knew ? 'Yes' : 'No' }, base)).ok, 'background ' + code);
+  ok(gas.post(Object.assign({ action: 'update', section: 'background', knew_problem: opts.knew ? 'Yes' : 'No' }, base)).ok, 'background ' + code);
   ok(gas.post(Object.assign({ action: 'update', section: 'comprehension', comprehension_errors: Math.floor(Math.random() * 3) }, base)).ok, 'comprehension ' + code);
 
   const history = [];
@@ -108,19 +108,19 @@ console.log('3. Invalid inputs and edge cases');
   ok(r('not json').code === 'invalid', 'non-JSON body rejected');
   ok(r({ action: 'nope' }).code === 'invalid', 'unknown action rejected');
   ok(r(Object.assign({ action: 'update', section: 'background', major: 'Physics', sex: 'Female', stats_course: 'Yes', knew_problem: 'No' }, base)).code === 'invalid', 'major outside list rejected');
-  ok(r(Object.assign({ action: 'update', section: 'background', major: 'Other', sex: '', stats_course: 'Yes', knew_problem: 'No' }, base)).code === 'invalid', 'empty field rejected');
+  ok(r(Object.assign({ action: 'update', section: 'background', knew_problem: '' }, base)).code === 'invalid', 'empty knew_problem rejected');
   ok(r({ action: 'decision', participant_id: p.id, device_token: 'wrong-token-123', run: 1, period: 1 }).code === 'unknown_participant', 'wrong device token rejected');
 
   // fresh player for decision validation
   const tok = token();
   const reg = r({ action: 'register', code_name: 'EDGE1', device_token: tok, is_pilot: 0 });
   const b = { action: 'decision', participant_id: reg.participant_id, device_token: tok, run: 1, period: 1, group: 'Baseline', button_order: 'switch-left', decision_time_ms: 900 };
-  const good = Object.assign({}, b, { prize_card: 2, first_pick: 1, revealed_card: 3, switch: 1, final_card: 2, won: 1, points: 40, cum_points: 40, always_switch_cum: 40, always_stay_cum: 10, switchbonus: 0, switchwon_prev: '' });
+  const good = Object.assign({}, b, { prize_card: 2, first_pick: 1, revealed_card: 3, switch: 1, final_card: 2, won: 1, points: 1, cum_points: 1, always_switch_cum: 1, always_stay_cum: 0, switchbonus: 0, switchwon_prev: '' });
   ok(r(Object.assign({}, good, { revealed_card: 2 })).code === 'invalid', 'revealed card = prize rejected');
   ok(r(Object.assign({}, good, { revealed_card: 1, final_card: 3 })).code === 'invalid', 'revealed card = first pick rejected');
   ok(r(Object.assign({}, good, { final_card: 1 })).code === 'invalid', 'final card inconsistent with switch rejected');
-  ok(r(Object.assign({}, good, { points: 10 })).code === 'invalid', 'wrong points rejected');
-  ok(r(Object.assign({}, good, { cum_points: 80 })).code === 'invalid', 'wrong cum_points rejected');
+  ok(r(Object.assign({}, good, { points: 0 })).code === 'invalid', 'wrong points rejected');
+  ok(r(Object.assign({}, good, { cum_points: 2 })).code === 'invalid', 'wrong cum_points rejected');
   ok(r(Object.assign({}, good, { switchwon_prev: 1 })).code === 'invalid', 'switchwon_prev in first round rejected');
   ok(r(Object.assign({}, good, { period: 6 })).code === 'invalid', 'period out of range rejected');
   ok(r(Object.assign({}, good, { run: 3 })).code === 'invalid', 'run out of range rejected');
@@ -128,7 +128,7 @@ console.log('3. Invalid inputs and edge cases');
   ok(r(Object.assign({}, good, { group: 'Track' })).code === 'invalid', 'wrong group label rejected');
   ok(r(good).ok, 'valid decision accepted');
   // a later round arriving while round 2 is missing must still be accepted (no deadlock)
-  const later = Object.assign({}, b, { period: 3, prize_card: 1, first_pick: 1, revealed_card: 2, switch: 0, final_card: 1, won: 1, points: 40, cum_points: 90, always_switch_cum: 60, always_stay_cum: 90, switchbonus: 30, switchwon_prev: 1 });
+  const later = Object.assign({}, b, { period: 3, prize_card: 1, first_pick: 1, revealed_card: 2, switch: 0, final_card: 1, won: 1, points: 1, cum_points: 2, always_switch_cum: 1, always_stay_cum: 2, switchbonus: 1, switchwon_prev: 1 });
   ok(r(later).ok, 'out-of-order round accepted when history is incomplete');
   ok(r({ action: 'finish', participant_id: reg.participant_id, device_token: tok, manip_indirect: 'Maybe' }).code === 'invalid', 'invalid manip_indirect rejected');
   const ctl = real.find(q => q.group === 'Control');
@@ -151,14 +151,14 @@ console.log('4. Brute-force recomputation of derived columns from the Sheet');
     ok(rows.length === 10, id + ' has exactly 10 rows (no duplicates)');
     rows.forEach(function (r, k) {
       rowsChecked++;
-      const sw = (x) => x[C.first_pick] !== x[C.prize_card] ? 40 : 10;
-      const st = (x) => x[C.first_pick] === x[C.prize_card] ? 40 : 10;
+      const sw = (x) => x[C.first_pick] !== x[C.prize_card] ? CFG.POINTS_WIN : CFG.POINTS_LOSE;
+      const st = (x) => x[C.first_pick] === x[C.prize_card] ? CFG.POINTS_WIN : CFG.POINTS_LOSE;
       const sameRun = rows.slice(0, k + 1).filter(x => x[C.run] === r[C.run]);
       const exp = {
         revealed_ok: r[C.revealed_card] !== r[C.prize_card] && r[C.revealed_card] !== r[C.first_pick],
         group: r[C.run] === 1 ? 'Baseline' : real.concat().find(p => p.id === id) ? real.find(p => p.id === id).group : r[C.group],
-        points: r[C.final_card] === r[C.prize_card] ? 40 : 10,
-        cum_points: sameRun.reduce((s, x) => s + (x[C.final_card] === x[C.prize_card] ? 40 : 10), 0),
+        points: r[C.final_card] === r[C.prize_card] ? CFG.POINTS_WIN : CFG.POINTS_LOSE,
+        cum_points: sameRun.reduce((s, x) => s + (x[C.final_card] === x[C.prize_card] ? CFG.POINTS_WIN : CFG.POINTS_LOSE), 0),
         always_switch_cum: sameRun.reduce((s, x) => s + sw(x), 0),
         always_stay_cum: sameRun.reduce((s, x) => s + st(x), 0),
         switchbonus: rows.slice(0, k).reduce((s, x) => s + sw(x) - st(x), 0),
