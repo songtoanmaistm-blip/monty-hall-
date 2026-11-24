@@ -11,8 +11,8 @@
 var SETTINGS = {
   ROUNDS_RUN1: 5,
   ROUNDS_RUN2: 5,
-  POINTS_WIN: 40,
-  POINTS_LOSE: 10,
+  POINTS_WIN: 1,
+  POINTS_LOSE: 0,
 };
 
 var DECISION_COLS = [
@@ -102,6 +102,10 @@ function int_(v, min, max, name) {
 function oneOf_(v, list, name) {
   if (list.indexOf(v) === -1) fail_('invalid', name + ' must be one of: ' + list.join(', ') + '.');
   return v;
+}
+
+function optional_(v, list, name) {
+  return v === '' || v == null ? '' : oneOf_(v, list, name);
 }
 
 function normName_(v) {
@@ -235,10 +239,11 @@ function shuffle_(a) {
 function update_(b) {
   var p = auth_(b);
   if (b.section === 'background') {
+    // The game now asks only knew_problem; major, sex and stats_course stay as (blank) columns.
     setCells_(p, {
-      major: oneOf_(b.major, MAJORS, 'major'),
-      sex: oneOf_(b.sex, SEXES, 'sex'),
-      stats_course: oneOf_(b.stats_course, YESNO, 'stats_course'),
+      major: optional_(b.major, MAJORS, 'major'),
+      sex: optional_(b.sex, SEXES, 'sex'),
+      stats_course: optional_(b.stats_course, YESNO, 'stats_course'),
       knew_problem: oneOf_(b.knew_problem, YESNO, 'knew_problem'),
     });
   } else if (b.section === 'comprehension') {
