@@ -136,7 +136,11 @@ if (typeof document !== 'undefined') (function () {
 
   let S = load();
   if (!S || S.v !== 1) { S = newState(); save(); }
-  if (params.get('pilot') === '1' && !S.is_pilot && S.step === 'welcome') { S.is_pilot = 1; save(); }
+  // Test phones: a pilot game never carries over to the real link, and a finished
+  // pilot game starts again from the welcome page, so the same phone can test many times.
+  const pilotLink = params.get('pilot') === '1';
+  if (S.is_pilot && (!pilotLink || S.step === 'done') && !S.outbox.length) { S = newState(); save(); }
+  if (pilotLink && !S.is_pilot && S.step === 'welcome') { S.is_pilot = 1; save(); }
 
   /* ---------- network ---------- */
   // A full https URL (Apps Script) or a same-site path (used by tests/dev-server.js).
