@@ -3,7 +3,6 @@
  * Replication of Friedman (1998), AER 88(4).
  *
  * Deploy:  Deploy → New deployment → Web app → Execute as: Me, Who has access: Anyone.
- * Admin:   Project Settings → Script Properties → ADMIN_KEY = <a long secret word>.
  *
  * IMPORTANT: SETTINGS below must match config.js on the website.
  * The game checks this at registration and refuses to start if they differ.
@@ -38,7 +37,7 @@ var BUTTON_ORDERS = ['switch-left', 'stay-left'];
 function doGet(e) {
   var p = (e && e.parameter) || {};
   try {
-    if (p.action === 'results') return json_(getResults_(p.key));
+    if (p.action === 'results') return json_(getResults_());
     return json_({ ok: true, service: 'monty-hall', settings: SETTINGS });
   } catch (err) {
     return errorResponse_(err);
@@ -217,23 +216,16 @@ function register_(b) {
   return { ok: true, participant_id: name, group: group, settings: SETTINGS };
 }
 
-/** Permuted-block randomisation: blocks of 4 (2 Track + 2 Control), separate sequences for pilot and real. */
+/**
+ * Alternating assignment in order of registration: 1st Control, 2nd Track, 3rd Control, 4th Track, …
+ * Pilot and real players have separate counters, so pilot testing cannot shift the real sequence.
+ */
 function nextGroup_(pilot) {
   var props = PropertiesService.getScriptProperties();
-  var key = pilot ? 'GROUP_BLOCK_PILOT' : 'GROUP_BLOCK_REAL';
-  var queue = JSON.parse(props.getProperty(key) || '[]');
-  if (!queue.length) queue = shuffle_(['Track', 'Track', 'Control', 'Control']);
-  var g = queue.shift();
-  props.setProperty(key, JSON.stringify(queue));
-  return g;
-}
-
-function shuffle_(a) {
-  for (var i = a.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var t = a[i]; a[i] = a[j]; a[j] = t;
-  }
-  return a;
+  var key = pilot ? 'GROUP_COUNT_PILOT' : 'GROUP_COUNT_REAL';
+  var n = Number(props.getProperty(key) || 0);
+  props.setProperty(key, String(n + 1));
+  return n % 2 === 0 ? 'Control' : 'Track';
 }
 
 function update_(b) {
@@ -354,18 +346,18 @@ function finish_(b) {
   return { ok: true, total_points: total };
 }
 
-function getResults_(key) {
-  var adminKey = PropertiesService.getScriptProperties().getProperty('ADMIN_KEY');
-  if (!adminKey) return { ok: false, code: 'not_configured', error: 'ADMIN_KEY is not set in Script Properties.' };
-  if (!key || String(key) !== adminKey) return { ok: false, code: 'unauthorized', error: 'Wrong or missing key.' };
+/** Results are open to anyone with the link (no admin key). device_token is left out:
+ *  it is what lets a phone write rows for its player, so it must not be published. */
+function getResults_() {
+  function hideToken(o) { delete o.device_token; return o; }
   var psh = sheet_('participants', PARTICIPANT_COLS);
   var dsh = sheet_('decisions', DECISION_COLS);
   return {
     ok: true,
     settings: SETTINGS,
     server_time: new Date().toISOString(),
-    participants: rows_(psh, PARTICIPANT_COLS.length).map(function (r) { return toObj_(PARTICIPANT_COLS, r); }),
-    decisions: rows_(dsh, DECISION_COLS.length).map(function (r) { return toObj_(DECISION_COLS, r); }),
+    participants: rows_(psh, PARTICIPANT_COLS.length).map(function (r) { return hideToken(toObj_(PARTICIPANT_COLS, r)); }),
+    decisions: rows_(dsh, DECISION_COLS.length).map(function (r) { return hideToken(toObj_(DECISION_COLS, r)); }),
   };
 }
 
@@ -410,7 +402,7 @@ function deletePilotRows() {
     var pi = PARTICIPANT_COLS.indexOf('is_pilot'), di = DECISION_COLS.indexOf('is_pilot');
     var np = filterSheet_('participants', PARTICIPANT_COLS, function (r) { return Number(r[pi]) !== 1; });
     var nd = filterSheet_('decisions', DECISION_COLS, function (r) { return Number(r[di]) !== 1; });
-    PropertiesService.getScriptProperties().deleteProperty('GROUP_BLOCK_PILOT');
+    PropertiesService.getScriptProperties().deleteProperty('GROUP_COUNT_PILOT');
     SpreadsheetApp.getUi().alert('Deleted ' + np + ' pilot participants and ' + nd + ' pilot decisions.');
   } finally {
     lock.releaseLock();
@@ -425,8 +417,8 @@ function deleteAllData() {
     filterSheet_('participants', PARTICIPANT_COLS, function () { return false; });
     filterSheet_('decisions', DECISION_COLS, function () { return false; });
     var props = PropertiesService.getScriptProperties();
-    props.deleteProperty('GROUP_BLOCK_PILOT');
-    props.deleteProperty('GROUP_BLOCK_REAL');
+    props.deleteProperty('GROUP_COUNT_PILOT');
+    props.deleteProperty('GROUP_COUNT_REAL');
     SpreadsheetApp.getUi().alert('All data deleted.');
   } finally {
     lock.releaseLock();

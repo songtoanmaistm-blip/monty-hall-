@@ -2,28 +2,15 @@
 (function () {
   'use strict';
 
-  const DECISION_COLS = ['timestamp', 'participant_id', 'device_token', 'is_pilot', 'run', 'period', 'group',
+  const DECISION_COLS = ['timestamp', 'participant_id', 'is_pilot', 'run', 'period', 'group',
     'prize_card', 'first_pick', 'revealed_card', 'switch', 'final_card', 'won', 'points', 'cum_points',
     'always_switch_cum', 'always_stay_cum', 'switchbonus', 'switchwon_prev', 'decision_time_ms', 'button_order'];
-  const PARTICIPANT_COLS = ['participant_id', 'device_token', 'is_pilot', 'registered_at', 'group', 'major', 'sex',
+  const PARTICIPANT_COLS = ['participant_id', 'is_pilot', 'registered_at', 'group', 'major', 'sex',
     'stats_course', 'knew_problem', 'comprehension_errors', 'manip_indirect', 'manip_direct', 'exit_text',
     'finished', 'total_points', 'finished_at'];
 
   const $ = function (id) { return document.getElementById(id); };
   const css = function (v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); };
-
-  /* ---------- admin key: read once, then hide it from the address bar ---------- */
-  const params = new URLSearchParams(location.search);
-  let key = params.get('key');
-  try {
-    if (key) sessionStorage.setItem('mh_key', key);
-    else key = sessionStorage.getItem('mh_key');
-  } catch (e) { /* storage blocked: keep key in memory only */ }
-  if (params.has('key')) {
-    params.delete('key');
-    const q = params.toString();
-    history.replaceState(null, '', location.pathname + (q ? '?' + q : ''));
-  }
 
   let data = null;
   let revealed = false;
@@ -39,17 +26,12 @@
       message('API_URL in config.js is not set yet.', true);
       return;
     }
-    if (!key) {
-      message('Open this page as <b>results.html?key=YOUR_ADMIN_KEY</b>.', true);
-      $('status').textContent = '';
-      return;
-    }
     try {
       const sep = CONFIG.API_URL.indexOf('?') === -1 ? '?' : '&';
-      const res = await fetch(CONFIG.API_URL + sep + 'action=results&key=' + encodeURIComponent(key));
+      const res = await fetch(CONFIG.API_URL + sep + 'action=results');
       const json = JSON.parse(await res.text());
       if (!json.ok) {
-        message(json.code === 'unauthorized' ? 'Wrong admin key.' : (json.error || 'Server error.'), true);
+        message(json.error || 'Server error.', true);
         return;
       }
       data = json;

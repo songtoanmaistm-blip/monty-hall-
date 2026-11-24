@@ -90,6 +90,7 @@ for (let i = 1; i <= 20; i++) real.push(playPlayer('ST' + String(i).padStart(2, 
 const nTrack = real.filter(p => p.group === 'Track').length;
 console.log('   real groups: Track ' + nTrack + ', Control ' + (20 - nTrack));
 ok(nTrack === 10, 'groups are balanced 10/10 among 20 real players');
+ok(real.every((p, i) => p.group === (i % 2 === 0 ? 'Control' : 'Track')), 'groups alternate Control, Track, Control, … in order of registration');
 
 /* ---------------------------------------------- invalid inputs / edge cases */
 console.log('3. Invalid inputs and edge cases');
@@ -177,9 +178,9 @@ console.log('4. Brute-force recomputation of derived columns from the Sheet');
 /* ------------------------------------------------ 5. results API, pilot clear */
 console.log('5. Results API and pilot clean-up');
 {
-  ok(gas.get({ action: 'results', key: 'wrong' }).code === 'unauthorized', 'wrong admin key returns no data');
-  ok(gas.get({ action: 'results' }).code === 'unauthorized', 'missing admin key returns no data');
-  const res = gas.get({ action: 'results', key: 'secret-key' });
+  const res = gas.get({ action: 'results' });
+  ok(res.ok, 'results load without an admin key');
+  ok(res.participants.concat(res.decisions).every(r => !('device_token' in r)), 'results never publish device tokens');
   ok(res.ok && res.participants.length === 24 && res.decisions.length === 232, 'results: 24 participants, 232 decisions (got ' + res.participants.length + ', ' + res.decisions.length + ')');
   ok(res.participants.filter(p => p.is_pilot === 1).length === 3, '3 pilot participants flagged');
   ok(res.decisions.filter(d => d.is_pilot === 1).length === 30, '30 pilot decisions flagged');
@@ -189,7 +190,7 @@ console.log('5. Results API and pilot clean-up');
   const after = gas.get({ action: 'results', key: 'secret-key' });
   ok(after.participants.length === 21 && after.decisions.length === 202, 'after "Delete pilot rows": 21 participants, 202 decisions');
   ok(after.participants.every(p => p.is_pilot === 0), 'no pilot rows remain');
-  ok(!gas.props.has('GROUP_BLOCK_PILOT'), 'pilot group sequence reset');
+  ok(!gas.props.has('GROUP_COUNT_PILOT'), 'pilot group sequence reset');
 }
 
 console.log('\n' + (failures ? failures + ' of ' + checks + ' checks FAILED' : 'All ' + checks + ' checks passed.'));

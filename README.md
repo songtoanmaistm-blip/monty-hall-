@@ -3,7 +3,7 @@
 A replication of Friedman (1998), *Monty Hall's Three Doors*, AER 88(4), for about 20 students who play at the same time on their own phones.
 
 - **Game:** `index.html`. Students open it from a QR code. It is mobile-first, needs no login and is in English.
-- **Results:** `results.html?key=YOUR_ADMIN_KEY`. Open this on your laptop and project it at the end.
+- **Results:** `results.html`. Open this on your laptop and project it at the end. There is no admin key: anyone who has the link can see the results, so keep the link to yourself.
 - **Data:** a Google Sheet you own, written by a Google Apps Script web app (`apps-script/Code.gs`).
 
 ```
@@ -23,21 +23,16 @@ tests/                    local checks (not needed online)
 1. Go to <https://sheets.google.com> and create a **blank spreadsheet**. Name it, for example, *Monty Hall data*.
 2. In the menu, choose **Extensions → Apps Script**. A code editor opens in a new tab.
 3. Delete everything in `Code.gs`. Open `apps-script/Code.gs` from this folder in Notepad, copy **all** of it, and paste it in. Click **Save** (the disk icon).
-4. Set the admin key:
-   - Click **Project Settings** (the ⚙ gear icon on the left).
-   - Scroll to **Script Properties** and click **Add script property**.
-   - Property: `ADMIN_KEY`. Value: a long secret word you make up, for example `blue-otter-7713`. Write it down.
-   - Click **Save script properties**.
-5. Deploy it as a web app:
+4. Deploy it as a web app:
    - Click **Deploy → New deployment**.
    - Click the ⚙ next to "Select type" and choose **Web app**.
    - Description: `v1`. **Execute as: Me**. **Who has access: Anyone**.
    - Click **Deploy** and then **Authorize access**, and choose your Google account.
    - Google shows "Google hasn't verified this app". This is normal for your own script. Click **Advanced → Go to … (unsafe) → Allow**.
    - Copy the **Web app URL**. It ends in `/exec`.
-6. Test it: paste the URL into a browser tab. You should see `{"ok":true,"service":"monty-hall",…}`.
-7. Go back to the Sheet tab and reload it. A **Monty Hall** menu appears. Click **Monty Hall → Set up sheets**, which creates the `participants` and `decisions` tabs with headers. Do not rename or reorder those columns.
-8. Open `config.js` in Notepad and replace `PASTE_APPS_SCRIPT_WEB_APP_URL_HERE` with your `/exec` URL. Keep the quotes and save.
+5. Test it: paste the URL into a browser tab. You should see `{"ok":true,"service":"monty-hall",…}`.
+6. Go back to the Sheet tab and reload it. A **Monty Hall** menu appears. Click **Monty Hall → Set up sheets**, which creates the `participants` and `decisions` tabs with headers. Do not rename or reorder those columns.
+7. Open `config.js` in Notepad and replace `PASTE_APPS_SCRIPT_WEB_APP_URL_HERE` with your `/exec` URL. Keep the quotes and save.
 
 > **Settings:** the rounds and points are set in `config.js`, and **also** in the `SETTINGS` block at the top of `Code.gs`. If you change one, change both and redeploy (see Part D). If they differ, the game shows a "Setup error" message instead of starting, so the pilot will catch it.
 
@@ -49,9 +44,9 @@ tests/                    local checks (not needed online)
 4. Go to **Settings → Pages**. Under "Build and deployment", set Source to **Deploy from a branch**, Branch to **main** and folder **/ (root)**, then click **Save**.
 5. After 1–2 minutes the page shows your public link: `https://USERNAME.github.io/monty-hall/`.
    - Game: `https://USERNAME.github.io/monty-hall/`
-   - Results: `https://USERNAME.github.io/monty-hall/results.html?key=YOUR_ADMIN_KEY`
+   - Results: `https://USERNAME.github.io/monty-hall/results.html`
 
-The admin key is **never** stored in the repository. You type it into the results link yourself. The results page removes the key from the address bar right after loading, so it doesn't show on the projector.
+The results page needs no key. It never shows the `device_token` column, because that token is what lets a phone save rows for its player.
 
 To change a file later, open it on GitHub, click the ✏ pencil, edit it and click **Commit changes**. The site updates in about a minute.
 
@@ -70,7 +65,7 @@ python tools/make_qr.py https://USERNAME.github.io/monty-hall/
 ```
 
 - `qr-game.png` is the game link. Project it for the class.
-- `qr-results.png` is the results page **without** the key. On your own laptop, add `?key=YOUR_ADMIN_KEY` to the address.
+- `qr-results.png` is the results page. Keep it to yourself.
 
 ## Part D: Redeploying after changing `Code.gs`
 
@@ -100,7 +95,7 @@ Do this a few days before class, with the `?pilot=1` link.
 - [ ] **Duplicate code name:** on phone 2, use the same code name as phone 1. You must see "This code name is taken, please choose another".
 - [ ] **Reload mid-game:** in the middle of a round (after picking a card), reload the page or close and reopen the tab. It must come back to the same round with the same cards.
 - [ ] **Airplane mode:** turn on airplane mode, play 1–2 rounds (the top corner shows "offline – will retry"), then turn it off. Within a few seconds it must show "saved ✓", and the rows must appear in the Sheet with no gaps or duplicates.
-- [ ] **Sheet check:** each phone has exactly 10 rows in `decisions` (5 + 5). `group` is `Baseline` in Run 1 and `Track` or `Control` in Run 2. `participants` shows `finished = 1` and the right `total_points`. With 4 pilot phones, the split should be 2 Track / 2 Control.
+- [ ] **Sheet check:** each phone has exactly 10 rows in `decisions` (5 + 5). `group` is `Baseline` in Run 1 and `Track` or `Control` in Run 2. `participants` shows `finished = 1` and the right `total_points`. Pilot players alternate Control, Track, Control, Track in the order they register.
 - [ ] **Track box:** a Track phone shows the "If you had always switched / stayed" box after each Run 2 round. A Control phone never shows it.
 - [ ] **Results page by hand:** untick "Exclude pilot data". For one round, count the switches in the Sheet yourself (or use a filter) and compare with Chart 1. Do the same for one cell of the table.
 - [ ] **Time the session** from scanning the QR code to the thank-you screen.
@@ -127,7 +122,7 @@ Do this a few days before class, with the `?pilot=1` link.
 
 **`participants`** has one row per person. `comprehension_errors` is the total number of wrong answers in the quick check, counting each wrong question on each attempt. `manip_direct` is blank for Control. `total_points` is computed by the server from the `decisions` rows.
 
-Group assignment uses permuted blocks of 4 (2 Track + 2 Control in random order), run under a lock on the server. At any moment the two groups differ by at most 2 people.
+Group assignment alternates in order of registration (when the player presses Continue on the code-name page): 1st Control, 2nd Track, 3rd Control, 4th Track, and so on. It runs under a lock on the server, so two players registering at the same moment still get different slots. Pilot players have their own sequence, and **Delete pilot rows** restarts it. At any moment the two groups differ by at most 1 person.
 
 ## Local testing (optional, for whoever maintains the code)
 
@@ -143,12 +138,11 @@ This runs 300,000 random rounds and checks that the revealed card is never the p
 node tests/dev-server.js
 ```
 
-This serves the whole site at <http://localhost:8787> with an in-memory "Sheet". The results page is at `/results.html?key=testkey`. To simulate an outage, open `/__offline?on=1`; `/__offline?on=0` ends it.
+This serves the whole site at <http://localhost:8787> with an in-memory "Sheet". The results page is at `/results.html`. To simulate an outage, open `/__offline?on=1`; `/__offline?on=0` ends it.
 
 ## Troubleshooting
 
 - **"Not set up yet" on the phone:** `API_URL` in `config.js` is still the placeholder.
 - **"Could not reach the server":** check the web app URL ends in `/exec` and that the deployment has *Who has access: Anyone*.
-- **The results page says "Wrong admin key":** check the `?key=` value against the `ADMIN_KEY` Script Property. If the page remembered a wrong key, close the tab and open the link again.
 - **You changed `Code.gs` but nothing changed:** you need a **new version** (Part D).
 - **"⚠ save error" on a phone:** the server rejected a row. This should never happen in normal play. Note the code name and check the Sheet.
